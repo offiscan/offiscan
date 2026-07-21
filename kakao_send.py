@@ -2,8 +2,9 @@
 카카오톡 '나에게 보내기' 전송 모듈 (액세스 토큰 자동 갱신)
 
 다른 스크립트에서:
-    from kakao_send import send
-    send("보낼 내용")
+    from kakao_send import send, send_long
+    send("짧은 내용")            990자까지. 넘으면 잘린다.
+    send_long("긴 리포트")       990자마다 (1/3) 처럼 나눠서 순서대로 보낸다
 
 단독 테스트:
     py kakao_send.py
@@ -76,6 +77,47 @@ def _post(token, text, link=None):
                          headers={"Authorization": f"Bearer {token}"},
                          data={"template_object": json.dumps(template, ensure_ascii=False)},
                          timeout=15)
+
+
+CHUNK = 900          # 머리표 '(1/3)' 자리를 남긴 실제 본문 상한
+
+
+def split_text(text, chunk=CHUNK):
+    """줄 단위로 자른다. 한 줄이 통째로 상한을 넘으면 그 줄만 강제로 쪼갠다."""
+    parts, buf = [], ""
+    for line in text.split("\n"):
+        while len(line) > chunk:
+            if buf:
+                parts.append(buf.rstrip("\n"))
+                buf = ""
+            parts.append(line[:chunk])
+            line = line[chunk:]
+        if len(buf) + len(line) + 1 > chunk:
+            parts.append(buf.rstrip("\n"))
+            buf = ""
+        buf += line + "\n"
+    if buf.strip():
+        parts.append(buf.rstrip("\n"))
+    return parts or [""]
+
+
+def send_long(text, link=None, delay=1.0):
+    """긴 글을 여러 통으로 나눠 보낸다. 한 통이라도 실패하면 False."""
+    import time
+    parts = split_text(text)
+    if len(parts) == 1:
+        return send(parts[0], link)
+
+    print(f"[카카오] {len(text)}자 -> {len(parts)}통으로 분할")
+    ok = True
+    for i, part in enumerate(parts, 1):
+        head = f"({i}/{len(parts)})\n"
+        # 링크 미리보기는 첫 통에만. 매 통에 붙으면 카드가 줄줄이 생긴다.
+        if not send(head + part, link if i == 1 else None):
+            ok = False
+        if i < len(parts):
+            time.sleep(delay)
+    return ok
 
 
 def send(text, link=None):

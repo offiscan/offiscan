@@ -584,7 +584,7 @@ def build_message(by_city, months, news=None):
 
 def send_kakao(text):
     try:
-        from kakao_send import send
+        from kakao_send import send_long as send
     except ImportError:
         print("[카카오] kakao_send.py 가 같은 폴더에 없습니다.")
         return False
