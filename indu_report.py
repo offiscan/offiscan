@@ -46,10 +46,24 @@ MAX_ROWS_PER_CITY = 30          # 리포트에 넣을 개별거래 수
 
 # 리포트 앞쪽에 배치할 주력 시군
 REPORT_CITIES = ["이천시", "여주시", "안성시", "평택시", "용인시", "화성시", "광주시", "양평군"]
-# 카톡에 시세를 넣을 시군.
-#   MAIN_CITY 에 이름을 적으면 항상 그 시군만 나온다. (권장)
-#   비워두면("") ROTATION 순서대로 매주 돌아가며 나온다.
-MAIN_CITY = "안성시"
+# 카톡에 시세를 넣을 시군. 여기 적은 순서대로 나온다.
+#   한 곳만 보려면  MAIN_CITIES = ["안성시"]
+#   비워두면 []      ROTATION 순서대로 매주 한 곳씩 돌아가며 나온다.
+#   이름은 "안성" 이 아니라 "안성시" 처럼 정확히 적을 것.
+MAIN_CITIES = ["안성시", "이천시", "여주시", "평택시"]
+
+# --- 월별/분기/연간 흐름 표 ---
+# 매주 붙이면 똑같은 표가 반복돼서 안 보게 된다. 그래서 기본은 "auto".
+#   "auto"   매달 첫째 월요일에만. 분기 다음 달이면 분기표, 1월이면 연간표까지
+#   "always" 매번 다 붙인다
+#   "never"  안 붙인다
+FLOW_MODE = "auto"
+
+# 월별 흐름에서 전체와 나란히 보여줄 용도지역
+FLOW_ZONE = "계획관리"
+
+# 흐름 표에 쓸 최소 건수. 이보다 적은 달은 중앙값 대신 '-' 로 둔다.
+FLOW_MIN = 1
 ROTATION = ["안성시", "이천시", "여주시", "평택시", "용인시", "화성시", "광주시", "양평군"]
 
 # 건축물 주용도 필터. 빈 리스트면 전체.
@@ -542,43 +556,156 @@ def save_report(text):
     return path
 
 
-def build_message(by_city, months, news=None):
-    period = f"{months[0][2:4]}.{months[0][4:]}~{months[-1][2:4]}.{months[-1][4:]}"
-    if MAIN_CITY:
-        city = MAIN_CITY
-    else:
-        week = datetime.now().isocalendar()[1]
-        city = ROTATION[week % len(ROTATION)]
-    rows = by_city.get(city, [])
+def _ym(v):
+    """'2026-07' 과 '202607' 을 같은 키로 맞춘다."""
+    return (v or "").replace("-", "")
 
-    lines = [f"[OFFISCAN] 공장·창고 주간 브리핑", f"{period} 기준 · 만원/평", ""]
-    if news:
-        lines.append(f"◆ 신규 {len(news)}건")
-        for r in news[:5]:
-            lines.append(f" {r['city']} {r['dong']} 연{r['bldg_py']:,.0f}평 "
-                         f"{r['total_manwon']/10000:,.1f}억 (연{r['per_bldg']:,.0f})")
-        lines.append("")
-    lines.append(f"── {city} 시세 ──")
+
+def _med(rows):
+    """대지평단가 중앙값. 값이 없으면 None."""
+    v = [r["per_plot"] for r in rows if r["per_plot"] > 0]
+    if len(v) < FLOW_MIN:
+        return None
+    return statistics.median(v)
+
+
+def _cell(rows):
+    m = _med(rows)
+    return f"{len(rows):>2}건 {m:>4,.0f}" if m else f"{len(rows):>2}건    -"
+
+
+def flow_monthly(rows, months):
+    """월별 흐름. 전체와 계획관리를 나란히."""
+    L = [f"── 월별 흐름 (전체 / {FLOW_ZONE}) ──"]
+    for ym in months:
+        sub = [r for r in rows if _ym(r["ym"]) == _ym(ym)]
+        zsub = [r for r in sub if FLOW_ZONE in (r["zone"] or "")]
+        k = _ym(ym)
+        L.append(f"{k[2:4]}.{k[4:]}  {_cell(sub)}  |  {_cell(zsub)}")
+    L.append("")
+    return L
+
+
+def flow_quarterly(rows, months):
+    """분기 흐름. 최근 12개월을 3개월씩 묶는다."""
+    L = ["── 분기 흐름 ──"]
+    for i in range(0, len(months) - 2, 3):
+        grp = months[i:i + 3]
+        keys = {_ym(g) for g in grp}
+        sub = [r for r in rows if _ym(r["ym"]) in keys]
+        zsub = [r for r in sub if FLOW_ZONE in (r["zone"] or "")]
+        k = _ym(grp[0])
+        y, m = k[2:4], int(k[4:])
+        L.append(f"{y}.{(m - 1) // 3 + 1}Q  {_cell(sub)}  |  {_cell(zsub)}")
+    L.append("")
+    return L
+
+
+def flow_annual(rows, months):
+    """12개월 총괄."""
+    zsub = [r for r in rows if FLOW_ZONE in (r["zone"] or "")]
+    L = ["── 연간 총괄 ──",
+         f"기간  {_ym(months[0])} ~ {_ym(months[-1])}",
+         f"전체     {_cell(rows)}",
+         f"{FLOW_ZONE}  {_cell(zsub)}"]
+    plots = [r["per_plot"] for r in rows if r["per_plot"] > 0]
+    if len(plots) >= MIN_COUNT_FOR_STAT:
+        st = stat_block(plots)
+        L.append(f"상위25% {st['q75']:,.0f} / 상위10% {st['q90']:,.0f}")
+    L.append("")
+    return L
+
+
+def which_flows(today=None):
+    """오늘 날짜로 어떤 표를 붙일지 정한다."""
+    if FLOW_MODE == "never":
+        return set()
+    if FLOW_MODE == "always":
+        return {"month", "quarter", "year"}
+
+    d = today or datetime.now()
+    # 첫째 월요일: 그 달의 1~7일 사이 월요일
+    if not (d.weekday() == 0 and d.day <= 7):
+        return set()
+
+    f = {"month"}
+    # 분기가 끝난 다음 달(4·7·10·1월)은 신고가 덜 들어와 한 달 늦춘다
+    if d.month in (2, 5, 8, 11):
+        f.add("quarter")
+    if d.month == 1:
+        f.update({"quarter", "year"})
+    return f
+
+
+def news_block(news):
+    """이번 주 신규. 한 줄로는 비싼지 싼지 판단이 안 돼서 4줄로 편다."""
+    L = [f"━━ 이번 주 신규 {len(news)}건 ━━", ""]
+    for r in news:
+        L.append(f"{r['city']} {r['dong']}")
+        L.append(f" 대지 {r['plot_py']:,.0f}평 / 연면적 {r['bldg_py']:,.0f}평")
+        line = f" {r['total_manwon']/10000:,.1f}억"
+        if r["per_plot"] > 0:
+            line += f" · 대지평당 {r['per_plot']:,.0f}만"
+        L.append(line)
+        tail = [x for x in (r["zone"], f"{r['build_year']}년" if r["build_year"] else "",
+                            f"건폐율 {far(r)*100:,.0f}%" if r["plot_py"] else "") if x]
+        if tail:
+            L.append(" " + " · ".join(tail))
+        L.append("")
+    return L
+
+
+def city_block(city, rows, flows, months):
+    L = [f"━━ {city} ━━"]
     if not rows:
-        lines.append("(해당 기간 거래 없음)")
-        return "\n".join(lines)
+        L += ["(해당 기간 거래 없음)", ""]
+        return L
 
     plots = [r["per_plot"] for r in rows if r["per_plot"] > 0]
-    blds = [r["per_bldg"] for r in rows if r["per_bldg"] > 0]
-    lines.append(f"◆ {len(rows)}건")
+    blds = [r["per_bldg"] for r in rows if bldg_stat_ok(r)]
+    L.append(f"◆ {len(rows)}건")
     if len(plots) >= MIN_COUNT_FOR_STAT:
-        s = stat_block(plots)
-        lines.append(f" 대지단가 중앙 {s['median']:,.0f} / 상위25% {s['q75']:,.0f}")
+        st = stat_block(plots)
+        L.append(f" 대지단가 중앙 {st['median']:,.0f} / 상위25% {st['q75']:,.0f}")
     if len(blds) >= MIN_COUNT_FOR_STAT:
-        s = stat_block(blds)
-        lines.append(f" 연면적단가 중앙 {s['median']:,.0f} / 상위25% {s['q75']:,.0f}")
+        st = stat_block(blds)
+        L.append(f" 연면적단가 중앙 {st['median']:,.0f} / 상위25% {st['q75']:,.0f}")
+    L.append("")
 
-    lines += ["", "◆ 금액 상위"]
+    L.append("◆ 금액 상위")
     for r in sorted(rows, key=lambda x: x["total_manwon"], reverse=True)[:6]:
-        lines.append(f" {r['dong']} 연{r['bldg_py']:,.0f}평 {r['total_manwon']/10000:,.1f}억 "
-                     f"(연{r['per_bldg']:,.0f})")
+        L.append(f" {r['dong']} 연{r['bldg_py']:,.0f}평 {r['total_manwon']/10000:,.1f}억 "
+                 f"(연{r['per_bldg']:,.0f})")
+    L.append("")
 
-    lines += ["", "상세는 indu_report 파일 확인"]
+    if "month" in flows:
+        L += flow_monthly(rows, months)
+    if "quarter" in flows:
+        L += flow_quarterly(rows, months)
+    if "year" in flows:
+        L += flow_annual(rows, months)
+    return L
+
+
+def build_message(by_city, months, news=None, today=None):
+    a, b = _ym(months[0]), _ym(months[-1])
+    period = f"{a[2:4]}.{a[4:]}~{b[2:4]}.{b[4:]}"
+    flows = which_flows(today)
+
+    cities = list(MAIN_CITIES)
+    if not cities:
+        week = (today or datetime.now()).isocalendar()[1]
+        cities = [ROTATION[week % len(ROTATION)]]
+
+    lines = ["[OFFISCAN] 공장·창고 브리핑", f"{period} 기준 · 만원/평", ""]
+
+    if news:
+        lines += news_block(news[:5])
+
+    for c in cities:
+        lines += city_block(c, by_city.get(c, []), flows, months)
+
+    lines.append("상세 거래내역은 깃허브 reports 폴더")
     return "\n".join(lines)
 
 
