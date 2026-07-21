@@ -2,14 +2,15 @@ name: OFFISCAN
 
 on:
   schedule:
-    - cron: "0 22 * * *"   # 매일 07:00 KST - 뉴스
-    - cron: "0 23 * * 0"   # 월요일 08:00 KST - 실거래
+    - cron: "0 22 * * *"    # 매일 07:00 KST - 뉴스
+    - cron: "0 23 * * 0"    # 월요일 08:00 KST - 실거래
+    - cron: "30 23 * * 0"   # 월요일 08:30 KST - 고객 브리핑
   workflow_dispatch:
     inputs:
       job:
         description: "수동 실행할 작업"
         type: choice
-        options: [news, indu]
+        options: [news, indu, client]
         default: news
 
 permissions:
@@ -48,6 +49,10 @@ jobs:
         if: github.event.schedule == '0 23 * * 0' || inputs.job == 'indu'
         run: python indu_report.py
 
+      - name: 고객 브리핑
+        if: github.event.schedule == '30 23 * * 0' || inputs.job == 'client'
+        run: python client_digest.py send
+
       - name: master 저장
         if: always()
         run: |
@@ -56,3 +61,4 @@ jobs:
           git add -f indu_master.csv news_master.csv || true
           git diff --staged --quiet || git commit -m "master update $(date +%F)"
           git push || true
+
