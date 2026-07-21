@@ -2,7 +2,7 @@ name: OFFISCAN
 
 on:
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "17 21 * * *"
     - cron: "0 23 * * 0"
     - cron: "30 23 * * 0"
   workflow_dispatch:
@@ -41,8 +41,8 @@ jobs:
           NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
           EOF
 
-      - name: 뉴스
-        if: github.event.schedule == '0 22 * * *' || inputs.job == 'news'
+       - name: 뉴스
+        if: github.event.schedule == '17 21 * * *' || inputs.job == 'news'
         run: python news_report.py
 
       - name: 실거래
