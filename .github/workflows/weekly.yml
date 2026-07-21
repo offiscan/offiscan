@@ -2,9 +2,9 @@ name: OFFISCAN
 
 on:
   schedule:
-    - cron: "0 22 * * *"    # 매일 07:00 KST - 뉴스
-    - cron: "0 23 * * 0"    # 월요일 08:00 KST - 실거래
-    - cron: "30 23 * * 0"   # 월요일 08:30 KST - 고객 브리핑
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * 0"
+    - cron: "30 23 * * 0"
   workflow_dispatch:
     inputs:
       job:
@@ -53,7 +53,7 @@ jobs:
         if: github.event.schedule == '30 23 * * 0' || inputs.job == 'client'
         run: python client_digest.py send
 
-   - name: 결과물 저장
+      - name: 결과물 저장
         if: always()
         run: |
           mkdir -p reports
