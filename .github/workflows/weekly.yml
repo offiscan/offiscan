@@ -1,0 +1,58 @@
+name: OFFISCAN
+
+on:
+  schedule:
+    - cron: "0 22 * * *"   # 매일 07:00 KST - 뉴스
+    - cron: "0 23 * * 0"   # 월요일 08:00 KST - 실거래
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "수동 실행할 작업"
+        type: choice
+        options: [news, indu]
+        default: news
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: keys.txt 생성
+        run: |
+          cat > keys.txt <<'EOF'
+          DATA_GO_KR_KEY=${{ secrets.DATA_GO_KR_KEY }}
+          KAKAO_ACCESS_TOKEN=
+          KAKAO_REST_KEY=${{ secrets.KAKAO_REST_KEY }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+          KAKAO_REFRESH_TOKEN=${{ secrets.KAKAO_REFRESH_TOKEN }}
+          NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
+          EOF
+
+      - name: 뉴스
+        if: github.event.schedule == '0 22 * * *' || inputs.job == 'news'
+        run: python news_report.py
+
+      - name: 실거래
+        if: github.event.schedule == '0 23 * * 0' || inputs.job == 'indu'
+        run: python indu_report.py
+
+      - name: master 저장
+        if: always()
+        run: |
+          git config user.name  "offiscan-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -f indu_master.csv news_master.csv || true
+          git diff --staged --quiet || git commit -m "master update $(date +%F)"
+          git push || true
