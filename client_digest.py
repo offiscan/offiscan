@@ -7,8 +7,12 @@ client_digest.py — 고객에게 보낼 주간 요약 만들기
   client_digest.py: 고객이 보는 것. 6~8건, 주 1회, 해석이 붙는다.
 
 실행:
-  py client_digest.py            최근 7일 → client_YYYYMMDD.txt
-  py client_digest.py 14         최근 14일
+  py client_digest.py            최근 7일 → client_YYYYMMDD.txt 만 생성
+  py client_digest.py send       생성 + 카카오톡(나에게 보내기) 발송
+  py client_digest.py 14 send    최근 14일 + 발송
+
+카톡으로 오는 것은 '초안'이다. 고객에게 바로 가는 것이 아니다.
+받아서 [ ] 두세 줄을 채운 뒤 고객에게 복사해서 보낸다.
 
 만들어지는 파일을 메모장으로 열어
   1) [ ] 로 비워둔 해석 칸을 채우고
@@ -43,6 +47,11 @@ TAGLINE = "발품은 제가 팝니다"
 BLOG = "blog.naver.com/dadaissue"
 CONTACT = "메이트플러스부동산중개 정소장"
 PHONE = ""                 # 넣으면 하단에 표시. 비우면 생략
+
+# 카톡 '나에게 보내기' 한 통은 990자가 상한이다. 넘으면 잘린다.
+KAKAO_LIMIT = 990
+# 원문 링크를 두 번째 카톡으로 따로 보낼지
+SEND_LINKS = True
 
 # 고객에게 보여줄 분야만. 순서가 곧 표시 순서다.
 SECTIONS = [
@@ -155,13 +164,24 @@ def build_link_sheet(picked):
     return "\n".join(L)
 
 
+def build_link_msg(picked):
+    """두 번째 카톡. 원문 주소만. 본문에 섞으면 미리보기 카드가 줄줄이 붙는다."""
+    L = [f"[{BRAND}] 위 브리핑 원문", ""]
+    for i, it in enumerate(picked, 1):
+        L.append(f"{i}. {it['title'][:30]}")
+        L.append(f"   {it['link']}")
+    return "\n".join(L)
+
+
 def main():
+    args = sys.argv[1:]
+    do_send = "send" in args
+
     days = DAYS_BACK
-    if len(sys.argv) > 1:
-        try:
-            days = int(sys.argv[1])
-        except ValueError:
-            pass
+    for a in args:
+        if a.isdigit():
+            days = int(a)
+            break
 
     # news_report 의 수집기를 그대로 쓰되 기간만 늘린다
     nr.HOURS_BACK = days * 24
@@ -186,8 +206,30 @@ def main():
     print(text)
     print("=" * 46)
     print(f"\n저장: {path}")
-    print("메모장으로 열어 맨 위 [ ] 두세 줄만 채운 뒤 카톡에 붙여넣으세요.")
-    print(f"글자수 {len(text)}자 (카톡 한 화면 기준 900자 이내 권장)")
+    print("맨 위 [ ] 두세 줄만 채운 뒤 고객에게 복사해서 보내세요.")
+    print(f"글자수 {len(text)}자 (카톡 한 통 상한 {KAKAO_LIMIT}자)")
+
+    if len(text) > KAKAO_LIMIT:
+        print(f"!! {len(text) - KAKAO_LIMIT}자 초과. MAX_ITEMS 를 줄이세요. 뒤가 잘립니다.")
+
+    if not do_send:
+        print("카톡 발송은 'send' 를 붙여 실행하세요.  py client_digest.py send")
+        return
+
+    try:
+        from kakao_send import send
+    except ImportError:
+        print("[카카오] kakao_send.py 가 같은 폴더에 없습니다.")
+        return
+
+    print("\n[카톡] 브리핑 초안 발송")
+    ok = send(text, link=f"https://{BLOG}")
+
+    if ok and SEND_LINKS:
+        import time
+        time.sleep(1)
+        print("[카톡] 원문 링크 발송")
+        send(build_link_msg(picked), link=f"https://{BLOG}")
 
 
 if __name__ == "__main__":
