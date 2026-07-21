@@ -1,0 +1,5 @@
+keys.txt
+keys_backup.txt
+*.csv
+!*_master.csv
+__pycache__/
