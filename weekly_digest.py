@@ -38,9 +38,11 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 #   img   : 사진 주소     (깃허브에 올린 사진 링크. 없으면 "")
 #   link  : 상세 브리프 PDF 주소  (없으면 "")
 WEEKLY_LISTINGS = [
-    {"tag": "임대", "title": "안성 원곡면 물류센터", "area": "609평", "temp": "냉동+상온",
-     "note": "안성JC 6분 · 즉시입주", "img": "", "link": ""},
-    {"tag": "매각", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
+    {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
+     "note": "일죽IC 5분 · 2008년 준공",
+     "img": "https://raw.githubusercontent.com/offiscan/offiscan/main/jino.jpg",
+     "link": "https://offiscan.github.io/offiscan/jino.pdf"},
+    {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
      "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
 
