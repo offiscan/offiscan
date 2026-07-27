@@ -40,8 +40,8 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 WEEKLY_LISTINGS = [
     {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
      "note": "일죽IC 5분 · 2008년 준공",
-     "img": "https://raw.githubusercontent.com/offiscan/offiscan/main/jino.jpg",
-     "link": "https://raw.githubusercontent.com/offiscan/offiscan/main/jino.pdf"},
+     "img": "https://offiscan.github.io/offiscan/jino.jpg",
+     "link": "https://offiscan.github.io/offiscan/jino.pdf"},
     {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
      "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
@@ -169,7 +169,7 @@ def build_kakao_touch(picked):
             bits = [b for b in (m.get("area"), m.get("temp"), m.get("note")) if b]
             L.append(f"· [{m['tag']}] {m['title']} — " + " · ".join(bits))
 
-    L += ["", "전체 뉴스·매물 자세히 보기 ↓", WEB_URL]
+    L += ["", "전체 뉴스·매물 한눈에 보기 ↓", "정미경 공인중개사 · 메이트플러스 부동산중개", WEB_URL]
     return "\n".join(L)
 
 
@@ -278,7 +278,14 @@ def build_web_html(picked):
     return f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>물류·산업 부동산 뉴스레터 · {today:%Y.%m.%d}</title></head>
+<title>물류·산업 부동산 뉴스레터 · 정미경 공인중개사</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="물류·산업 부동산 뉴스레터 · 정미경 공인중개사">
+<meta property="og:description" content="이천·안성·여주·평택 산업·물류 부동산 소식과 추천매물 | 메이트플러스 부동산중개">
+<meta property="og:image" content="https://offiscan.github.io/offiscan/jino.jpg">
+<meta property="og:url" content="{WEB_URL}">
+<meta name="description" content="이천·안성·여주·평택 산업·물류 부동산 소식과 추천매물 | 정미경 공인중개사">
+</head>
 <body style="margin:0;padding:0;background:#E9ECF1;font-family:'Malgun Gothic',Apple SD Gothic Neo,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9ECF1;padding:24px 12px;"><tr><td align="center">
 <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="width:640px;max-width:640px;background:#fff;border-radius:12px;overflow:hidden;">
@@ -291,7 +298,7 @@ def build_web_html(picked):
         <div style="color:{GOLD};font-size:14px;padding-top:6px;">{today:%Y. %m. %d.} · 이천 / 안성 / 여주 / 평택</div>
       </td>
       <td valign="bottom" align="right" style="white-space:nowrap;">
-        <div style="color:#fff;font-size:17px;font-weight:bold;">메이트플러스 부동산중개</div>
+        <div style="color:#fff;font-size:17px;font-weight:bold;letter-spacing:1px;">MatePlus Realty</div>
         <div style="color:{GOLD};font-size:12px;padding-top:3px;">정미경 매니저</div>
       </td>
     </tr></table>
