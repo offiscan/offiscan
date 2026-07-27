@@ -41,7 +41,7 @@ WEEKLY_LISTINGS = [
     {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
      "note": "일죽IC 5분 · 2008년 준공",
      "img": "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true",
-     "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf"},
+     "link": "https://offiscan.github.io/offiscan/jino.pdf"},
     {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
      "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
