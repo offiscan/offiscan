@@ -29,10 +29,19 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 
 # ===================== 매주 수정 =====================
 
-# 이번 주 추천매물 1~2개. 공개 가능한 것만. link 는 상세페이지/PDF (없으면 "")
+# 이번 주 추천매물 1~2개. 공개 가능한 것만.
+#   tag   : "매각" 또는 "임대"
+#   title : 이름(주소)  예) "안성 원곡면 물류센터"
+#   area  : 평형        예) "609평"
+#   temp  : 온도         예) "냉동+상온" / "상온" / "저온"  (없으면 "")
+#   note  : 특징 한 줄    예) "안성JC 6분"
+#   img   : 사진 주소     (깃허브에 올린 사진 링크. 없으면 "")
+#   link  : 상세 브리프 PDF 주소  (없으면 "")
 WEEKLY_LISTINGS = [
-    {"tag": "매각", "title": "이천 물류센터", "spec": "대지 7,700평 · 임차 안정형", "link": ""},
-    {"tag": "임대", "title": "안성 제조공장", "spec": "연면적 1,200평 · 즉시 입주", "link": ""},
+    {"tag": "임대", "title": "안성 원곡면 물류센터", "area": "609평", "temp": "냉동+상온",
+     "note": "안성JC 6분 · 즉시입주", "img": "", "link": ""},
+    {"tag": "매각", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
+     "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
 
 # 웹페이지 상단 '이번 주 시장 한눈에' 한 문단. 30초면 쓴다.
@@ -155,7 +164,8 @@ def build_kakao_touch(picked):
     if WEEKLY_LISTINGS:
         L += ["", "■ 이번 주 추천매물"]
         for m in WEEKLY_LISTINGS:
-            L.append(f"· [{m['tag']}] {m['title']} — {m['spec']}")
+            bits = [b for b in (m.get("area"), m.get("temp"), m.get("note")) if b]
+            L.append(f"· [{m['tag']}] {m['title']} — " + " · ".join(bits))
 
     L += ["", "전체 뉴스·매물 자세히 보기 ↓", WEB_URL]
     return "\n".join(L)
@@ -197,17 +207,33 @@ def _listings_html():
     for m in WEEKLY_LISTINGS:
         badge = NAVY if m["tag"] == "매각" else GOLD
         tcol = "#fff" if m["tag"] == "매각" else "#3d3208"
-        title = _e(m["title"])
+
+        # 사진 (있을 때만)
+        photo = ""
+        if m.get("img"):
+            photo = (f'<div style="border-radius:10px;overflow:hidden;margin-bottom:10px;">'
+                     f'<img src="{_e(m["img"])}" alt="{_e(m["title"])}" '
+                     f'style="width:100%;height:150px;object-fit:cover;display:block;"></div>')
+
+        # 평형 · 온도 (한 줄)
+        spec_bits = [b for b in (m.get("area"), m.get("temp")) if b]
+        spec = " · ".join(spec_bits)
+
+        inner = (
+            f'{photo}'
+            f'<span style="display:inline-block;background:{badge};color:{tcol};font-size:11px;font-weight:bold;padding:2px 8px;border-radius:20px;">{_e(m["tag"])}</span>'
+            f'<div style="color:{NAVY};font-size:15px;font-weight:bold;margin:9px 0 4px;">{_e(m["title"])}</div>'
+            f'<div style="color:#1F2A52;font-size:13px;font-weight:bold;">{_e(spec)}</div>'
+            f'<div style="color:#5A6472;font-size:13px;line-height:1.5;margin-top:2px;">{_e(m.get("note",""))}</div>'
+        )
         if m.get("link"):
-            title = f'<a href="{_e(m["link"])}" style="text-decoration:none;color:{NAVY};">{title}</a>'
+            detail = f'<div style="color:{GOLD};font-size:12px;font-weight:bold;margin-top:8px;">상세 보기 &#10132;</div>'
+            inner = f'<a href="{_e(m["link"])}" style="text-decoration:none;display:block;">{inner}{detail}</a>'
+
         cards.append(
             f'<td width="50%" valign="top" style="padding:5px;">'
             f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E8EE;border-radius:12px;">'
-            f'<tr><td style="padding:14px;">'
-            f'<span style="display:inline-block;background:{badge};color:{tcol};font-size:11px;font-weight:bold;padding:2px 8px;border-radius:20px;">{_e(m["tag"])}</span>'
-            f'<div style="color:{NAVY};font-size:15px;font-weight:bold;margin:9px 0 4px;">{title}</div>'
-            f'<div style="color:#5A6472;font-size:13px;line-height:1.5;">{_e(m["spec"])}</div>'
-            f'</td></tr></table></td>'
+            f'<tr><td style="padding:14px;">{inner}</td></tr></table></td>'
         )
     # 2열 그리드
     rows = ""
@@ -263,7 +289,7 @@ def build_web_html(picked):
         <div style="color:{GOLD};font-size:14px;padding-top:6px;">{today:%Y. %m. %d.} · 이천 / 안성 / 여주 / 평택</div>
       </td>
       <td valign="bottom" align="right" style="white-space:nowrap;">
-        <div style="color:#fff;font-size:17px;font-weight:bold;letter-spacing:1px;">MatePlus</div>
+        <div style="color:#fff;font-size:17px;font-weight:bold;">메이트플러스 부동산중개</div>
         <div style="color:{GOLD};font-size:12px;padding-top:3px;">정미경 매니저</div>
       </td>
     </tr></table>
