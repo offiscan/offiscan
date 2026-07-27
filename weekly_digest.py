@@ -41,7 +41,7 @@ WEEKLY_LISTINGS = [
     {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
      "note": "일죽IC 5분 · 2008년 준공",
      "img": "https://raw.githubusercontent.com/offiscan/offiscan/main/jino.jpg",
-     "link": "https://offiscan.github.io/offiscan/jino.pdf"},
+     "link": "https://raw.githubusercontent.com/offiscan/offiscan/main/jino.pdf"},
     {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
      "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
@@ -246,7 +246,7 @@ def _listings_html():
         f'<tr><td style="padding:26px 24px 0 24px;">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{NAVY};">'
         f'<tr><td width="5" style="background:{GOLD};font-size:0;line-height:0;">&nbsp;</td>'
-        f'<td style="padding:11px 16px;color:#fff;font-size:16px;font-weight:bold;">금주의 추천매물</td></tr></table></td></tr>'
+        f'<td style="padding:11px 16px;color:#fff;font-size:16px;font-weight:bold;">정매니저의 추천매물</td></tr></table></td></tr>'
         f'<tr><td style="padding:8px 19px 0 19px;">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table></td></tr>'
     )
