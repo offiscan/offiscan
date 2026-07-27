@@ -50,8 +50,9 @@ WEB_URL = "https://offiscan.github.io/offiscan/"   # GitHub Pages 켠 뒤 실제
 CONTACT_PHONE = "010-5728-9911"
 
 WEEK_HOURS = 168        # 7일
-WEB_MAX = 12            # 웹페이지에 실을 기사 수
-TOUCH_NEWS = 3          # 카톡에 넣을 헤드라인 수
+WEB_MAX = 30            # 웹페이지에 실을 기사 수 (카톡은 아래 TOUCH_NEWS 로 별도)
+TOUCH_NEWS = 3          # 카톡에 넣을 헤드라인 수 (짧게 유지 — 3개 권장)
+WEB_MAX_PER_SOURCE = 4  # 웹페이지에서 한 언론사가 차지할 수 있는 최대 기사 수
 
 # 로그인/유료벽이 있어 고객이 클릭해도 안 열리는 사이트. 여기 뉴스는 아예 제외.
 # 나중에 또 걸리는 곳 생기면 따옴표로 감싸 한 줄 추가하면 됩니다.
@@ -107,6 +108,7 @@ def boosted_score(it):
 
 nr.score = boosted_score            # pick_balanced 내부 정렬이 이 점수를 쓰게 됨
 score = boosted_score               # weekly_digest 내부 정렬도 같은 기준
+nr.MAX_PER_SOURCE = WEB_MAX_PER_SOURCE   # 웹페이지는 풍성하게 (일일 파이프라인은 별도 실행이라 무관)
 
 
 def gather():
