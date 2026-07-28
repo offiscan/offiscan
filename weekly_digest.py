@@ -38,8 +38,8 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 #   img   : 사진 주소     (깃허브에 올린 사진 링크. 없으면 "")
 #   link  : 상세 브리프 PDF 주소  (없으면 "")
 WEEKLY_LISTINGS = [
-    {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
-     "note": "일죽IC 4분 · 2008년 준공",
+    {"tag": "매각", "title": "안성 죽산면 상온창고 및 사무동", "area": "대지 894평 / 연면적 616평", "temp": "상온",
+     "note": "일죽IC 4분 · 2008년 준공 · 관리상태:최상",
      "img": "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true",
      "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf?raw=true"}
 ]
