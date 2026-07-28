@@ -41,7 +41,9 @@ WEEKLY_LISTINGS = [
     {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
      "note": "일죽IC 5분 · 2008년 준공",
      "img": "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true",
-     "link": "https://offiscan.github.io/offiscan/jino.pdf"}
+     "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf?raw=true"},
+    {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
+     "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
 ]
 
 # 웹페이지 상단 '이번 주 시장 한눈에' 한 문단. 30초면 쓴다.
@@ -200,46 +202,50 @@ def _section(cat, items):
     )
 
 
+def _listing_card(m, full):
+    """full=True 면 가로 전체 카드(사진도 크게), False 면 반쪽 카드."""
+    badge = NAVY if m["tag"] == "매각" else GOLD
+    tcol = "#fff" if m["tag"] == "매각" else "#3d3208"
+    ph_h = 240 if full else 150
+
+    photo = ""
+    if m.get("img"):
+        photo = (f'<div style="border-radius:10px;overflow:hidden;margin-bottom:10px;">'
+                 f'<img src="{_e(m["img"])}" alt="{_e(m["title"])}" '
+                 f'style="width:100%;height:{ph_h}px;object-fit:cover;display:block;"></div>')
+
+    spec = " · ".join([b for b in (m.get("area"), m.get("temp")) if b])
+    inner = (
+        f'{photo}'
+        f'<span style="display:inline-block;background:{badge};color:{tcol};font-size:11px;font-weight:bold;padding:2px 8px;border-radius:20px;">{_e(m["tag"])}</span>'
+        f'<div style="color:{NAVY};font-size:15px;font-weight:bold;margin:9px 0 4px;">{_e(m["title"])}</div>'
+        f'<div style="color:#1F2A52;font-size:13px;font-weight:bold;">{_e(spec)}</div>'
+        f'<div style="color:#5A6472;font-size:13px;line-height:1.5;margin-top:2px;">{_e(m.get("note",""))}</div>'
+    )
+    if m.get("link"):
+        detail = f'<div style="color:{GOLD};font-size:12px;font-weight:bold;margin-top:8px;">상세 보기 &#10132;</div>'
+        inner = f'<a href="{_e(m["link"])}" style="text-decoration:none;display:block;">{inner}{detail}</a>'
+
+    w = "100%" if full else "50%"
+    return (f'<td width="{w}" valign="top" style="padding:5px;">'
+            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E8EE;border-radius:12px;">'
+            f'<tr><td style="padding:14px;">{inner}</td></tr></table></td>')
+
+
 def _listings_html():
     if not WEEKLY_LISTINGS:
         return ""
-    cards = []
-    for m in WEEKLY_LISTINGS:
-        badge = NAVY if m["tag"] == "매각" else GOLD
-        tcol = "#fff" if m["tag"] == "매각" else "#3d3208"
-
-        # 사진 (있을 때만)
-        photo = ""
-        if m.get("img"):
-            photo = (f'<div style="border-radius:10px;overflow:hidden;margin-bottom:10px;">'
-                     f'<img src="{_e(m["img"])}" alt="{_e(m["title"])}" '
-                     f'style="width:100%;height:150px;object-fit:cover;display:block;"></div>')
-
-        # 평형 · 온도 (한 줄)
-        spec_bits = [b for b in (m.get("area"), m.get("temp")) if b]
-        spec = " · ".join(spec_bits)
-
-        inner = (
-            f'{photo}'
-            f'<span style="display:inline-block;background:{badge};color:{tcol};font-size:11px;font-weight:bold;padding:2px 8px;border-radius:20px;">{_e(m["tag"])}</span>'
-            f'<div style="color:{NAVY};font-size:15px;font-weight:bold;margin:9px 0 4px;">{_e(m["title"])}</div>'
-            f'<div style="color:#1F2A52;font-size:13px;font-weight:bold;">{_e(spec)}</div>'
-            f'<div style="color:#5A6472;font-size:13px;line-height:1.5;margin-top:2px;">{_e(m.get("note",""))}</div>'
-        )
-        if m.get("link"):
-            detail = f'<div style="color:{GOLD};font-size:12px;font-weight:bold;margin-top:8px;">상세 보기 &#10132;</div>'
-            inner = f'<a href="{_e(m["link"])}" style="text-decoration:none;display:block;">{inner}{detail}</a>'
-
-        cards.append(
-            f'<td width="50%" valign="top" style="padding:5px;">'
-            f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E8EE;border-radius:12px;">'
-            f'<tr><td style="padding:14px;">{inner}</td></tr></table></td>'
-        )
-    # 2열 그리드
-    rows = ""
-    for i in range(0, len(cards), 2):
-        pair = "".join(cards[i:i + 2])
-        rows += f"<tr>{pair}</tr>"
+    # 매물이 1개든 2개든 카드는 항상 반쪽(50%) 크기. 홀수 끝자리는 오른쪽을 빈칸으로.
+    rows, i = "", 0
+    while i < len(WEEKLY_LISTINGS):
+        chunk = WEEKLY_LISTINGS[i:i + 2]
+        left = _listing_card(chunk[0], full=False)
+        if len(chunk) == 2:
+            right = _listing_card(chunk[1], full=False)
+        else:
+            right = '<td width="50%">&nbsp;</td>'   # 빈칸
+        rows += f"<tr>{left}{right}</tr>"
+        i += 2
     return (
         f'<tr><td style="padding:26px 24px 0 24px;">'
         f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{NAVY};">'
