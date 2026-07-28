@@ -39,11 +39,9 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 #   link  : 상세 브리프 PDF 주소  (없으면 "")
 WEEKLY_LISTINGS = [
     {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
-     "note": "일죽IC 5분 · 2008년 준공",
+     "note": "일죽IC 4분 · 2008년 준공",
      "img": "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true",
-     "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf?raw=true"},
-    {"tag": "임대", "title": "충주 대소원면 공장", "area": "3,024평", "temp": "상온",
-     "note": "충주TG 11분 · 준공 5년", "img": "", "link": ""},
+     "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf?raw=true"}
 ]
 
 # 웹페이지 상단 '이번 주 시장 한눈에' 한 문단. 30초면 쓴다.
