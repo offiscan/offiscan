@@ -19,7 +19,10 @@ news_report.py 의 수집·선별·점수 로직을 그대로 재사용한다.
 import os
 import sys
 import html
+import io
+import csv
 import urllib.parse
+import urllib.request
 from datetime import datetime
 from collections import defaultdict
 
@@ -37,12 +40,19 @@ from news_report import pick_balanced, score, norm, display_source, CAT_LABEL, K
 #   note  : 특징 한 줄    예) "안성JC 6분"
 #   img   : 사진 주소     (깃허브에 올린 사진 링크. 없으면 "")
 #   link  : 상세 브리프 PDF 주소  (없으면 "")
+#
+# 아래는 '시트를 못 읽을 때만' 쓰는 예비 목록이다. 평소엔 구글시트에서 읽어온다.
 WEEKLY_LISTINGS = [
-    {"tag": "매각", "title": "안성 죽산면 상온창고 및 사무동", "area": "대지 894평 / 연면적 616평", "temp": "상온",
-     "note": "일죽IC 4분 · 2008년 준공 · 관리상태 : 최상",
+    {"tag": "매각", "title": "안성 죽산면 상온창고", "area": "대지 740평 / 연면적 566평", "temp": "상온",
+     "note": "일죽IC 5분 · 2008년 준공",
      "img": "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true",
-     "link": "https://github.com/offiscan/offiscan/blob/main/docs/jino.pdf?raw=true"}
+     "link": "https://offiscan.github.io/offiscan/jino.pdf"},
 ]
+
+# ===== 매물 구글시트 =====
+# 이 시트만 고치면 매물이 자동 반영된다. (구글시트 → 파일 → 웹에 게시 → CSV 주소)
+SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQaWnz0fH4RUOvbPqUAdZnDwqgM9c2Ly-yMsy_kqplfNJMrEA3ntFKXAIFQd42FvRoCR7BIaxgCifPm/pub?output=csv"
+LISTINGS_PER_WEEK = 2       # 매주 내보낼 매물 수
 
 # 웹페이지 상단 '이번 주 시장 한눈에' 한 문단. 30초면 쓴다.
 # (나중에 이 부분도 Claude API 로 자동 생성 가능. 지금은 직접 쓰는 게 정확·안전)
@@ -90,6 +100,52 @@ WEB_ORDER = ["local", "comm", "house", "build", "policy", "gen"]
 
 NAVY = "#1F2A52"
 GOLD = "#C9A227"
+
+
+# ===================== 매물 시트 =====================
+
+def load_listings_from_sheet():
+    """구글시트(게시된 CSV)에서 '광고중' 매물을 읽어온다. 실패하면 None."""
+    try:
+        req = urllib.request.Request(SHEET_CSV_URL, headers={"User-Agent": "Mozilla/5.0"})
+        data = urllib.request.urlopen(req, timeout=20).read().decode("utf-8-sig")
+        rows = list(csv.DictReader(io.StringIO(data)))
+        out = []
+        for r in rows:
+            if (r.get("노출여부") or "").strip() != "광고중":
+                continue
+            name = (r.get("이름") or "").strip()
+            if not name or name.startswith("(예시)"):   # 빈 줄·예시 줄 제외
+                continue
+            out.append({
+                "tag":   (r.get("종류") or "").strip(),
+                "title": name,
+                "area":  (r.get("평형") or "").strip(),
+                "temp":  (r.get("온도") or "").strip(),
+                "note":  (r.get("특징") or "").strip(),
+                "img":   (r.get("사진주소") or "").strip(),
+                "link":  (r.get("브리프주소") or "").strip(),
+            })
+        return out or None
+    except Exception as e:
+        print(f"  [매물시트] 읽기 실패 → 파일 예비목록 사용: {str(e)[:60]}")
+        return None
+
+
+def pick_listings():
+    """이번 주 추천매물 선택. 주(week)마다 순번이 돌아가며 전체를 훑는다.
+    매물 N개면 매주 LISTINGS_PER_WEEK개씩 → 약 N/2주 만에 한 바퀴(≈3개월)."""
+    pool = load_listings_from_sheet()
+    if not pool:
+        print("  [매물] 시트 대신 파일 예비목록 사용")
+        return WEEKLY_LISTINGS
+    n = len(pool)
+    print(f"  [매물] 시트에서 광고중 {n}건 읽음")
+    if n <= LISTINGS_PER_WEEK:
+        return pool
+    week = datetime.now(KST).isocalendar()[1]        # 연중 주차
+    start = (week * LISTINGS_PER_WEEK) % n
+    return [pool[(start + k) % n] for k in range(LISTINGS_PER_WEEK)]
 
 
 # ===================== 수집 =====================
@@ -331,6 +387,10 @@ def build_web_html(picked):
 
 def main():
     dry = len(sys.argv) > 1 and sys.argv[1] == "dry"
+
+    # 이번 주 추천매물을 구글시트에서 선택 (실패 시 파일 예비목록)
+    global WEEKLY_LISTINGS
+    WEEKLY_LISTINGS = pick_listings()
 
     items = gather()
     if not items:
