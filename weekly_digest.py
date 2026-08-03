@@ -105,11 +105,30 @@ GOLD = "#C9A227"
 # ===================== 매물 시트 =====================
 
 def load_listings_from_sheet():
-    """구글시트(게시된 CSV)에서 '광고중' 매물을 읽어온다. 실패하면 None."""
+    """구글시트(게시된 CSV)에서 '광고중' 매물을 읽어온다. 25초 안에 응답 없으면 None.
+    별도 스레드로 받아 오므로, 구글이 느리거나 멈춰도 발송은 절대 지연되지 않는다."""
+    import threading
+    box = {}
+
+    def _fetch():
+        try:
+            req = urllib.request.Request(SHEET_CSV_URL, headers={"User-Agent": "Mozilla/5.0"})
+            box["data"] = urllib.request.urlopen(req, timeout=15).read().decode("utf-8-sig")
+        except Exception as e:
+            box["err"] = str(e)[:60]
+
+    print("  [매물시트] 읽는 중...")
+    t = threading.Thread(target=_fetch, daemon=True)
+    t.start()
+    t.join(25)          # 최대 25초만 기다린다
+
+    if "data" not in box:
+        why = box.get("err", "25초 내 응답 없음")
+        print(f"  [매물시트] 실패({why}) → 파일 예비목록 사용")
+        return None
+
     try:
-        req = urllib.request.Request(SHEET_CSV_URL, headers={"User-Agent": "Mozilla/5.0"})
-        data = urllib.request.urlopen(req, timeout=20).read().decode("utf-8-sig")
-        rows = list(csv.DictReader(io.StringIO(data)))
+        rows = list(csv.DictReader(io.StringIO(box["data"])))
         out = []
         for r in rows:
             if (r.get("노출여부") or "").strip() != "광고중":
@@ -128,7 +147,7 @@ def load_listings_from_sheet():
             })
         return out or None
     except Exception as e:
-        print(f"  [매물시트] 읽기 실패 → 파일 예비목록 사용: {str(e)[:60]}")
+        print(f"  [매물시트] 해석 실패 → 파일 예비목록 사용: {str(e)[:60]}")
         return None
 
 
