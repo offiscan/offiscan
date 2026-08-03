@@ -333,6 +333,13 @@ def build_web_html(picked):
             f'</td></tr></table></td></tr>'
         )
 
+    # 카톡 미리보기 대표사진(og:image) = 이번 주 첫 매물 사진
+    og_image = "https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true"
+    for m in WEEKLY_LISTINGS:
+        if m.get("img"):
+            og_image = m["img"]
+            break
+
     return f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -340,7 +347,7 @@ def build_web_html(picked):
 <meta property="og:type" content="website">
 <meta property="og:title" content="물류·산업 부동산 뉴스레터 · 정미경 공인중개사">
 <meta property="og:description" content="이천·안성·여주·평택 산업·물류 부동산 소식과 추천매물 | 메이트플러스 부동산중개">
-<meta property="og:image" content="https://github.com/offiscan/offiscan/blob/main/docs/jino.jpg?raw=true">
+<meta property="og:image" content="{og_image}">
 <meta property="og:url" content="{WEB_URL}">
 <meta name="description" content="이천·안성·여주·평택 산업·물류 부동산 소식과 추천매물 | 정미경 공인중개사">
 </head>
