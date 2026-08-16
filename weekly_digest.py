@@ -5,7 +5,9 @@ news_report.py 의 수집·선별·점수 로직을 그대로 재사용한다.
 설계 원칙:
   - 카톡을 자동 발송하지 않는다. '복붙용' 메시지 한 덩어리를 만들어 줄 뿐이다.
     핵심 고객에게 개인적으로 보내는 것이 이 채널의 목적이기 때문.
-  - 같은 데이터로 docs/index.html 을 만든다. 카톡 맨 밑 '자세히 보기'가 여기로 온다.
+  - 같은 데이터로 docs/index.html(최신호) + docs/YYYY-MM-DD.html(박제호) 둘 다 만든다.
+    카톡 맨 밑 '자세히 보기'는 '박제호(날짜 링크)'로 보낸다.
+    → 고객이 나중에 열어도, 지인에게 공유해도 그 주 내용이 그대로 유지된다.
   - news_master.csv 는 건드리지 않는다. (일일 뉴스 파이프라인과 완전 분리)
 
 사용법:
@@ -221,7 +223,10 @@ def gather():
 
 # ===================== 카톡 터치 메시지 =====================
 
-def build_kakao_touch(picked):
+def build_kakao_touch(picked, issue_url):
+    """카톡 복붙용 메시지. 맨 밑 링크는 '이번 호 박제 링크(issue_url)'를 쓴다.
+    → 메인(index)이 아니라 날짜 고정 링크라, 고객이 나중에 열거나 지인에게 공유해도
+      그 주의 뉴스·매물이 그대로 유지된다."""
     today = datetime.now(KST)
     top = sorted(picked, key=score, reverse=True)[:TOUCH_NEWS]
 
@@ -240,7 +245,7 @@ def build_kakao_touch(picked):
             bits = [b for b in (m.get("area"), m.get("temp"), m.get("note")) if b]
             L.append(f"· [{m['tag']}] {m['title']} — " + " · ".join(bits))
 
-    L += ["", "전체 뉴스·매물 한눈에 보기 ↓", "정미경 공인중개사 · 메이트플러스 부동산중개", WEB_URL]
+    L += ["", "전체 뉴스·매물 한눈에 보기 ↓", "정미경 공인중개사 · 메이트플러스 부동산중개", issue_url]
     return "\n".join(L)
 
 
@@ -422,7 +427,13 @@ def main():
         return
 
     picked = pick_balanced(items, total=WEB_MAX)
-    touch = build_kakao_touch(picked)
+
+    # 이번 호 '박제' 링크 먼저 확정 (카톡·웹 동일하게 사용)
+    today_kst = datetime.now(KST)
+    issue_name = f"{today_kst:%Y-%m-%d}.html"     # 예: 2026-08-18.html
+    issue_url = WEB_URL + issue_name
+
+    touch = build_kakao_touch(picked, issue_url)
 
     print("\n" + "=" * 46)
     print("복붙용 카톡 메시지 (아래를 그대로 복사)")
@@ -435,19 +446,30 @@ def main():
         return
 
     # 카톡 메시지 저장
-    ktxt = f"weekly_kakao_{datetime.now(KST):%Y%m%d}.txt"
+    ktxt = f"weekly_kakao_{today_kst:%Y%m%d}.txt"
     with open(ktxt, "w", encoding="utf-8-sig") as f:
         f.write(touch)
 
     # 웹페이지 저장 (GitHub Pages: main 브랜치 /docs)
     docs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
     os.makedirs(docs, exist_ok=True)
-    html_path = os.path.join(docs, "index.html")
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(build_web_html(picked))
+    web_html = build_web_html(picked)
+
+    # (1) 최신호 — 메인 링크용 (기존처럼 덮어쓰기)
+    index_path = os.path.join(docs, "index.html")
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(web_html)
+
+    # (2) 이번 호 영구 박제 — 날짜 파일 (고객이 받는 링크는 이걸로)
+    issue_path = os.path.join(docs, issue_name)
+    with open(issue_path, "w", encoding="utf-8") as f:
+        f.write(web_html)
 
     print(f"\n저장: {ktxt}")
-    print(f"저장: docs/index.html  →  git push 하면 {WEB_URL} 갱신")
+    print(f"저장: docs/index.html      →  최신호 (메인 {WEB_URL})")
+    print(f"저장: docs/{issue_name}  →  이번 호 영구 링크")
+    print(f"\n▶ 이번 주 고객에게 보낼 링크: {issue_url}")
+    print(f"  git push 하면 위 두 파일이 함께 올라갑니다.")
 
 
 if __name__ == "__main__":
