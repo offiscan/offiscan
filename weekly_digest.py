@@ -362,7 +362,7 @@ def build_web_html(picked):
             f'<tr><td width="4" style="background:{GOLD};font-size:0;line-height:0;">&nbsp;</td>'
             f'<td style="padding:14px 16px;">'
             f'<div style="color:{NAVY};font-size:14px;font-weight:bold;padding-bottom:6px;">이번 주 시장 한눈에</div>'
-            f'<div style="color:#5A6472;font-size:14px;line-height:1.6;">{_e(WEEKLY_BRIEF)}</div>'
+            f'<div style="color:#5A6472;font-size:14px;line-height:1.6;">{_e(WEEKLY_BRIEF).replace(chr(10), "<br>")}</div>'
             f'</td></tr></table></td></tr>'
         )
 
